@@ -1,4 +1,4 @@
-name: Build OpenAppFilter APK
+name: Build OpenAppFilter aarch64_generic
 
 on:
   workflow_dispatch:
@@ -22,32 +22,28 @@ jobs:
 
       - name: Download OpenWrt SDK
         run: |
-          # 针对 25.12.4 armsr armv8 的精准官方 SDK 地址
           SDK_URL="https://downloads.openwrt.org/releases/25.12.4/targets/armsr/armv8/openwrt-sdk-25.12.4-armsr-armv8_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
-          
-          echo "Downloading SDK from $SDK_URL..."
-          wget -qO sdk.tar.zst "$SDK_URL" || {
-            echo "Stable SDK download failed, trying snapshot fallback..."
-            wget -qO sdk.tar.zst "https://downloads.openwrt.org/snapshots/targets/armsr/armv8/openwrt-sdk-armsr-armv8_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
-          }
-          
+          wget -qO sdk.tar.zst "$SDK_URL" || wget -qO sdk.tar.zst "https://downloads.openwrt.org/snapshots/targets/armsr/armv8/openwrt-sdk-armsr-armv8_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
           tar -xf sdk.tar.zst --strip-components=1
           rm sdk.tar.zst
           
       - name: Clone OpenAppFilter Source
         run: |
-          # 3. 拉取社区适配过 Linux 6.12 内核及更高版本的 OpenAppFilter 分支
           git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 
       - name: Compile Single Package
         run: |
-          # 4. 更新 Feeds 并编译
           ./scripts/feeds update -a && ./scripts/feeds install -a
+          
+          echo "CONFIG_PACKAGE_luci-app-oaf=y" >> .config
           make defconfig
-          make package/OpenAppFilter/compile V=s -j$(nproc)
+          
+          make package/oaf/compile V=s -j$(nproc)
+          make package/open-app-filter/compile V=s -j$(nproc)
+          make package/luci-app-oaf/compile V=s -j$(nproc)
 
       - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: openappfilter-apks
-          path: bin/packages/aarch64_generic/base/*.apk
+          path: bin/packages/aarch64_generic/**/*.apk
