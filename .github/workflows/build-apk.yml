@@ -12,17 +12,14 @@ jobs:
 
       - name: Setup Dynamic Environment
         run: |
-          # 1. 声明目标架构和固件版本（请根据第一步查到的结果修改 VERSION）
+          # 1. 声明目标架构和固件版本（请根据实际情况修改 VERSION，如 24.10.0 或 snapshot）
           echo "ARCH=aarch64_generic" >> $GITHUB_ENV
-          echo "VERSION=25.12.4" >> $GITHUB_ENV # 如果是正式版，改成如 24.10.0
+          echo "VERSION=25.12.4" >> $GITHUB_ENV
 
       - name: Download OpenWrt SDK
         run: |
-          # 2. 自动拼凑官方下载地址并下载对应的 SDK
+          # 2. 自动下载对应的 SDK
           SDK_URL="https://downloads.openwrt.org/releases/${{ env.VERSION }}/targets/armsr/armv8/openwrt-sdk-${{ env.VERSION }}-armsr-armv8_gcc-14.2.0_musl.Linux-x86_64.tar.zst"
-          # 如果上面下载失败，说明是 snapshot 开发版，切换成开发版地址：
-          # SDK_URL="https://downloads.openwrt.org/snapshots/targets/armsr/armv8/openwrt-sdk-armsr-armv8_gcc-14.2.0_musl.Linux-x86_64.tar.zst"
-          
           wget -qO sdk.tar.zst "$SDK_URL" || wget -qO sdk.tar.zst "https://downloads.openwrt.org/snapshots/targets/armsr/armv8/openwrt-sdk-armsr-armv8_gcc-14.2.0_musl.Linux-x86_64.tar.zst"
           tar -xf sdk.tar.zst --strip-components=1
           
@@ -39,7 +36,7 @@ jobs:
           make package/OpenAppFilter/compile V=s -j$(nproc)
 
       - name: Upload APK Artifacts
-        uses: actions/artifacts@v4
+        uses: actions/upload-artifact@v4
         with:
           name: openappfilter-apks
- path: bin/packages/aarch64_generic/base/*.apk
+          path: bin/packages/aarch64_generic/base/*.apk
