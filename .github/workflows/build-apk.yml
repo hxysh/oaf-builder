@@ -48,5 +48,5 @@ jobs:
           name: openappfilter-apks
           path: |
             bin/packages/aarch64_generic/**/*oaf*.apk
-            bin/packages/aarch64_generic/**/*openappfilter*.apk
+            bin/packages/aarch64_generic/**/appfilter*.apk
             bin/targets/armsr/armv8/**/*oaf*.apk
