@@ -1,0 +1,45 @@
+name: Build OpenAppFilter APK
+
+on:
+  workflow_dispatch: # 允许你在网页上手动点击按钮触发编译
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Dynamic Environment
+        run: |
+          # 1. 声明目标架构和固件版本（请根据第一步查到的结果修改 VERSION）
+          echo "ARCH=aarch64_generic" >> $GITHUB_ENV
+          echo "VERSION=snapshot" >> $GITHUB_ENV # 如果是正式版，改成如 24.10.0
+
+      - name: Download OpenWrt SDK
+        run: |
+          # 2. 自动拼凑官方下载地址并下载对应的 SDK
+          SDK_URL="https://downloads.openwrt.org/releases/${{ env.VERSION }}/targets/armsr/armv8/openwrt-sdk-${{ env.VERSION }}-armsr-armv8_gcc-14.2.0_musl.Linux-x86_64.tar.zst"
+          # 如果上面下载失败，说明是 snapshot 开发版，切换成开发版地址：
+          # SDK_URL="https://downloads.openwrt.org/snapshots/targets/armsr/armv8/openwrt-sdk-armsr-armv8_gcc-14.2.0_musl.Linux-x86_64.tar.zst"
+          
+          wget -qO sdk.tar.zst "$SDK_URL" || wget -qO sdk.tar.zst "https://downloads.openwrt.org/snapshots/targets/armsr/armv8/openwrt-sdk-armsr-armv8_gcc-14.2.0_musl.Linux-x86_64.tar.zst"
+          tar -xf sdk.tar.zst --strip-components=1
+          
+      - name: Clone OpenAppFilter Source
+        run: |
+          # 3. 将 OAF 源码拉入 SDK 的 package 目录
+          git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
+
+      - name: Compile Single Package
+        run: |
+          # 4. 更新并安装基本 Feeds 依赖，然后仅编译 OAF
+          ./scripts/feeds update -a && ./scripts/feeds install -a
+          make defconfig
+          make package/OpenAppFilter/compile V=s -j$(nproc)
+
+      - name: Upload APK Artifacts
+        uses: actions/artifacts@v4
+        with:
+          name: openappfilter-apks
+ path: bin/packages/aarch64_generic/base/*.apk
