@@ -1,7 +1,7 @@
 name: Build OpenAppFilter APK
 
 on:
-  workflow_dispatch: # 允许你在网页上手动点击按钮触发编译
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,25 +12,36 @@ jobs:
 
       - name: Setup Dynamic Environment
         run: |
-          # 1. 声明目标架构和固件版本（请根据实际情况修改 VERSION，如 24.10.0 或 snapshot）
           echo "ARCH=aarch64_generic" >> $GITHUB_ENV
           echo "VERSION=25.12.4" >> $GITHUB_ENV
 
+      - name: Install System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex bison gawk gettext git libncurses5-dev libssl-dev python3-setuptools rsync swig unzip zlib1g-dev file wget zstd
+
       - name: Download OpenWrt SDK
         run: |
-          # 2. 自动下载对应的 SDK
-          SDK_URL="https://downloads.openwrt.org/releases/${{ env.VERSION }}/targets/armsr/armv8/openwrt-sdk-${{ env.VERSION }}-armsr-armv8_gcc-14.2.0_musl.Linux-x86_64.tar.zst"
-          wget -qO sdk.tar.zst "$SDK_URL" || wget -qO sdk.tar.zst "https://downloads.openwrt.org/snapshots/targets/armsr/armv8/openwrt-sdk-armsr-armv8_gcc-14.2.0_musl.Linux-x86_64.tar.zst"
+          # 针对 25.12.4 armsr armv8 的精准官方 SDK 地址
+          SDK_URL="https://downloads.openwrt.org/releases/25.12.4/targets/armsr/armv8/openwrt-sdk-25.12.4-armsr-armv8_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
+          
+          echo "Downloading SDK from $SDK_URL..."
+          wget -qO sdk.tar.zst "$SDK_URL" || {
+            echo "Stable SDK download failed, trying snapshot fallback..."
+            wget -qO sdk.tar.zst "https://downloads.openwrt.org/snapshots/targets/armsr/armv8/openwrt-sdk-armsr-armv8_gcc-14.3.0_musl.Linux-x86_64.tar.zst"
+          }
+          
           tar -xf sdk.tar.zst --strip-components=1
+          rm sdk.tar.zst
           
       - name: Clone OpenAppFilter Source
         run: |
-          # 3. 将 OAF 源码拉入 SDK 的 package 目录
-          git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
+          # 3. 拉取社区适配过 Linux 6.12 内核及更高版本的 OpenAppFilter 分支
+          git clone https://github.com/sbwml/OpenAppFilter.git package/OpenAppFilter
 
       - name: Compile Single Package
         run: |
-          # 4. 更新并安装基本 Feeds 依赖，然后仅编译 OAF
+          # 4. 更新 Feeds 并编译
           ./scripts/feeds update -a && ./scripts/feeds install -a
           make defconfig
           make package/OpenAppFilter/compile V=s -j$(nproc)
