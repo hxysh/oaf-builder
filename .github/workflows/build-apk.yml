@@ -37,7 +37,7 @@ jobs:
       - name: Clone OpenAppFilter Source
         run: |
           # 3. 拉取社区适配过 Linux 6.12 内核及更高版本的 OpenAppFilter 分支
-          git clone https://github.com/sbwml/OpenAppFilter.git package/OpenAppFilter
+          git clone https://github.com/destan19/OpenAppFilter.git package/OpenAppFilter
 
       - name: Compile Single Package
         run: |
